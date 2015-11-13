@@ -29,9 +29,10 @@ from getpass import getpass
 from binascii import hexlify, unhexlify
 from pbkdf2 import PBKDF2
 from Crypto.Cipher import AES
-from simplebitcoinfuncs.miscfuncs import *
-from simplebitcoinfuncs.miscbitcoinfuncs import *
-from simplebitcoinfuncs.bitcoin import *
+from simplebitcoinfuncs.hexhashes import sha512d, hash256
+from simplebitcoinfuncs.miscfuncs import strlify, hexstrlify, normalize_input
+from simplebitcoinfuncs.miscbitcoinfuncs import genkeyhex, genkey
+from simplebitcoinfuncs.bitcoin import uncompress, compress, privtopub, multiplypub, validatepubkey, privtohex
 
 
 macrounds = 2000 # Do not chage unless the other party also changes!
