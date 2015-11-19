@@ -5,12 +5,12 @@
 '''
 Simple AES256 encryption using Bitcoin public and private keys.
 
-The mac uses a pbkdf2 function, because computing the mac needs to be
-more resource intensive than decryption, so that an adversary cannot
-brute force through macs in order to reduce the search space for
-possible decryption keys.
+Changelog:  Removed outter MAC since decryption already serves as
+            authentication. Replaced with message-level Bitcoin
+            signature. Message also hexlified for less error-prone
+            Python 2/3 interoperability with edge case unicode chars.
 
-Requires:  pbkdf2, PyCrypto, simplebitcoinfuncs
+Requires:  PyCrypto, simplebitcoinfuncs
 '''
 
 
@@ -33,9 +33,7 @@ from simplebitcoinfuncs.hexhashes import sha512d, hash256
 from simplebitcoinfuncs.miscfuncs import strlify, hexstrlify, normalize_input
 from simplebitcoinfuncs.miscbitcoinfuncs import genkeyhex, genkey
 from simplebitcoinfuncs.bitcoin import uncompress, compress, privtopub, multiplypub, validatepubkey, privtohex
-
-
-macrounds = 2000 # Do not chage unless the other party also changes!
+from simplebitcoinfuncs.signandverify import signmsg, verifymsg
 
 
 def bitencrypt(recipient_pubkey,message,sender_privkey=genkeyhex()):
@@ -57,9 +55,11 @@ def bitencrypt(recipient_pubkey,message,sender_privkey=genkeyhex()):
         recipient_pubkey = compress(recipient_pubkey)
     sender_privkey = privtohex(sender_privkey)
     sender_pubkey = privtopub(sender_privkey,True)
-    try:
-        message = message.encode('utf-8')
+    try: message = message.encode('utf-8')
     except: pass
+    try: message = hexstrlify(bytearray(message))
+    except: message = hexstrlify(bytearray(message,'utf-8'))
+    message = message + '\n\n\n' + strlify(signmsg(message,sender_privkey,True,int(genkeyhex(),16)))
     numpads = 16 - (len(message) % 16)
     try:
         message = message + (numpads * chr(numpads))
@@ -72,11 +72,8 @@ def bitencrypt(recipient_pubkey,message,sender_privkey=genkeyhex()):
     encryption_key, iv = unhexlify(encryption_key), unhexlify(iv)
     e = AES.new(encryption_key, AES.MODE_CBC, iv)
     cipher = e.encrypt(message)
-    o = iv + cipher
-    mac = PBKDF2(unhexlify(sha512d(secret_key)),o,macrounds, \
-                 macmodule=hmac,digestmodule=hashlib.sha256).read(16)
-    o = base64.b64encode(unhexlify(sender_pubkey) + o + mac)
-    if 'bytes' == type(o).__name__ and str(o)[:2] == "b'":
+    o = base64.b64encode(unhexlify(sender_pubkey) + iv + cipher)
+    if 'bytes' == type(o).__name__ and str(o)[:2] == "b'" and str(o)[-1:] == "'":
         o = str(o)[2:-1]
     return o
 
@@ -96,15 +93,9 @@ def bitdecrypt(message,privkey):
     privkey = privtohex(privkey)
     sender_key = message[:66]
     assert sender_key[:2] == '02' or sender_key[:2] == '03'
-    mac = unhexlify(message[-32:])
     iv = unhexlify(message[66:98])
-    message = unhexlify(message[98:-32])
+    message = unhexlify(message[98:])
     secret_key = multiplypub(sender_key,privkey,True)
-    testmac = PBKDF2(unhexlify(sha512d(secret_key)),iv + message, \
-                     macrounds,macmodule=hmac, \
-                     digestmodule=hashlib.sha256).read(16)
-    if testmac != mac:
-        return sender_key, False
     encryption_key = unhexlify(hash256(secret_key))
     e = AES.new(encryption_key, AES.MODE_CBC, iv)
     message = e.decrypt(message)
@@ -117,16 +108,20 @@ def bitdecrypt(message,privkey):
         numpads = int(ord(message[-1]))
     except:
         numpads = int(message[-1])
-    assert numpads < 17
+    if numpads > 16:
+        return sender_key, False
     message = message[:-numpads]
+    message = strlify(message)
     try:
-        assert sys.version_info[0] == 2
-        message = message.encode('ascii')
+        sig = message[-88:]
+        message = message[:-88]
+        message = message[:-6] + message[-6:].replace('\\n\\n\\n','\n\n\n')
+        assert message[-3:] == '\n\n\n'
+        message = message[:-3]
+        assert sender_key == verifymsg(message,sig)
     except:
-        try:
-            if 'bytes' == type(message).__name__:
-                message = str(message)[2:-1]
-        except: pass
+        return sender_key, False
+    message = unhexlify(message).decode('utf-8')
     return sender_key, message
 
 
@@ -165,7 +160,7 @@ if __name__ == "__main__":
         'you will be asked to enter your private key. Use a single ' + \
         'hyphen to indicate that the key should be read from stdin. ' + \
         '(Hyphen can be used either for private key input or message ' + \
-        'input, but not both.)', default='i')
+        'input, but not both.)', default=None)
 
     args = parser.parse_args()
 
@@ -268,7 +263,7 @@ if __name__ == "__main__":
         except:
             print("\nInvalid private key entered. Please re-enter " + \
                   "your private key.\n")
-            priv = strlify(getpass('Private key: '))
+            priv = strlify(getpass('Enter your private key for decryption: '))
             priv = priv.replace('\r','').replace('\n','').replace(' ','')
         else:
             break
@@ -276,7 +271,7 @@ if __name__ == "__main__":
     if args.encrypt:
         try:
             o = bitencrypt(recipient,message,priv)
-        except:
+        except Exception as e:
             print('\nUnknown fatal error occured during encryption ' + \
                   'attempt. Exiting...')
             exit(1)
@@ -292,6 +287,8 @@ if __name__ == "__main__":
                   'attempt. Exiting...')
             exit(1)
         else:
+            if (o1[:2] != '02' and o1[:2] != '03') or len(o1) != 66:
+                o1 = 'Unknown (Encrypted message probably malformed.)'
             print("\nMessage From:\n" + o1 + "\n")
             if not o2:
                 print('Decryption was not possible with your private ' + \
