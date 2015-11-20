@@ -38,7 +38,7 @@ Requires: PyCrypto, pbkdf2, simplebitcoinfuncs
 
     echo 'L5k6WCAhEmuZb974oUyQRxhkvWGgG8ZrXBSer39ZwezYGfudwRNV' | python bitcrypt.py -e -m 'hello' -p - -r 02316cef96f58ba765bd4088855b3b946f8b1b657bf724eafdf0a6144f4d3d1cfb
 
-    python bitcrypt.py -d -m 'Ag+46lI6K/KP6YvfeFj7nu7MEyr3vsMeguCK8eGq5YXMJ/ROXMhBFGheEMQumI4fJl1ZykBMrBTfBBJwQonx7Vg5lBlB9vUKJbxXr5P7BKWt' -p i
+    python bitcrypt.py -d -m 'Ag+46lI6K/KP6YvfeFj7nu7MEyr3vsMeguCK8eGq5YXM6N8/49VYY/eXkb65erA7b6E0ofVgzP2ETj6wLaxPYa8BsNtTtV0l28/hF5tsIGQvNalShZkZAQW8OOgtgr4ntEMlEe0ZiMLYMdTRD92Pn9aG8gcuxkAMsrOxUiGDjzYufj7RB8Vv11K48+ZhxWfVID/fTeJq1GVuyB6Up34tzEc=' -p i
 
-    python bitcrypt.py -d -m 'Ag+46lI6K/KP6YvfeFj7nu7MEyr3vsMeguCK8eGq5YXMJ/ROXMhBFGheEMQumI4fJl1ZykBMrBTfBBJwQonx7Vg5lBlB9vUKJbxXr5P7BKWt' -p L3mRUisE32PBxyUcqERRBQ7ZArPVM7ZjrQj16f9WQ8qa5nvWRKfk
+    python bitcrypt.py -d -m 'Ag+46lI6K/KP6YvfeFj7nu7MEyr3vsMeguCK8eGq5YXM6N8/49VYY/eXkb65erA7b6E0ofVgzP2ETj6wLaxPYa8BsNtTtV0l28/hF5tsIGQvNalShZkZAQW8OOgtgr4ntEMlEe0ZiMLYMdTRD92Pn9aG8gcuxkAMsrOxUiGDjzYufj7RB8Vv11K48+ZhxWfVID/fTeJq1GVuyB6Up34tzEc=' -p L3mRUisE32PBxyUcqERRBQ7ZArPVM7ZjrQj16f9WQ8qa5nvWRKfk
 
