@@ -27,7 +27,6 @@ import base64
 import datetime
 from getpass import getpass
 from binascii import hexlify, unhexlify
-from pbkdf2 import PBKDF2
 from Crypto.Cipher import AES
 from simplebitcoinfuncs.hexhashes import sha512d, hash256
 from simplebitcoinfuncs.miscfuncs import strlify, hexstrlify, normalize_input
@@ -50,31 +49,51 @@ def bitencrypt(recipient_pubkey,message,sender_privkey=genkeyhex()):
     '''
 
     recipient_pubkey = validatepubkey(recipient_pubkey)
+                       # validatepubkey() in simplebitcoinfuncs.bitcoin
     assert recipient_pubkey
     if recipient_pubkey[:2] == '04':
         recipient_pubkey = compress(recipient_pubkey)
     sender_privkey = privtohex(sender_privkey)
-    sender_pubkey = privtopub(sender_privkey,True)
+                     # in simplebitcoinfuncs.bitcoin
+                     # takes many input types and converts to 64-char hex str
+
+    sender_pubkey = privtopub(sender_privkey,True) # True is compress pubkey
+
+    # Save headaches of messing around with Python 2/3 encoding issues
     try: message = message.encode('utf-8')
     except: pass
     try: message = hexstrlify(bytearray(message))
-    except: message = hexstrlify(bytearray(message,'utf-8'))
+    except: message = hexstrlify(bytearray(message,'utf-8'))    
+      # hexstrlify() = str(hexlify()).rstrip("'").replace("b'","",1).replace("'","")
+      # in simplebitcoinfuncs.miscfuncs, used to get same output for Python 2/3
+
     message = message + '\n\n\n' + strlify(signmsg(message,sender_privkey,True,int(genkeyhex(),16)))
+    # Recipient can authenticate message with pubkey of sender
+    # Authentication can only occur after decryption
+    # signmsg() found in simplebitcoinfuncs.signandverify
+    # genkeyhex() used for k found in simplebitcoinfuncs.miscbitcoinfuncs
+    # k via RFC 6979 coming soon
+
+    # Pad
     numpads = 16 - (len(message) % 16)
-    try:
-        message = message + (numpads * chr(numpads))
-    except:
-        message = message + bytes(numpads * chr(numpads).encode("utf-8"))
+    try:  message = message + (numpads * chr(numpads))
+    except:  message = message + bytes(numpads * chr(numpads).encode("utf-8"))
+
     iv = hash256(hexlify(os.urandom(40) + \
                 str(datetime.datetime.now()).encode("utf-8")))[:32]
     secret_key = multiplypub(recipient_pubkey,sender_privkey,True)
     encryption_key = hash256(secret_key)
     encryption_key, iv = unhexlify(encryption_key), unhexlify(iv)
+
     e = AES.new(encryption_key, AES.MODE_CBC, iv)
     cipher = e.encrypt(message)
+
     o = base64.b64encode(unhexlify(sender_pubkey) + iv + cipher)
+
     if 'bytes' == type(o).__name__ and str(o)[:2] == "b'" and str(o)[-1:] == "'":
+        # Same output type for Python 2/3
         o = str(o)[2:-1]
+
     return o
 
 
