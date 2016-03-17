@@ -280,9 +280,8 @@ if __name__ == "__main__":
         try:
             priv = privtohex(priv)
         except:
-            print("\nInvalid private key entered. Please re-enter " + \
-                  "your private key.\n")
-            priv = strlify(getpass('Enter your private key for decryption: '))
+            print("\nInvalid private key entered.\n")
+            priv = strlify(getpass('Please re-enter your private key: '))
             priv = priv.replace('\r','').replace('\n','').replace(' ','')
         else:
             break
@@ -295,7 +294,7 @@ if __name__ == "__main__":
                   'attempt. Exiting...')
             exit(1)
         else:
-            print(normalize_input(o))
+            print("\n" + normalize_input(o))
             exit(0)
 
     else:
