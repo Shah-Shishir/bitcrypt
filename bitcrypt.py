@@ -57,22 +57,23 @@ def bitencrypt(recipient_pubkey,message,sender_privkey=genkeyhex()):
                      # in simplebitcoinfuncs.bitcoin
                      # takes many input types and converts to 64-char hex str
 
-    sender_pubkey = privtopub(sender_privkey,True) # True is compress pubkey
+    sender_pubkey = privtopub(sender_privkey,True)
 
-    # Save headaches of messing around with Python 2/3 encoding issues
     try: message = message.encode('utf-8')
     except: pass
+
+    # Have left it this way even though it doubles the length of the message,
+    # because I want to ensure that anybody who used this app previously can
+    # be assured of backwards compatability.
     try: message = hexstrlify(bytearray(message))
     except: message = hexstrlify(bytearray(message,'utf-8'))    
-      # hexstrlify() = str(hexlify()).rstrip("'").replace("b'","",1).replace("'","")
-      # in simplebitcoinfuncs.miscfuncs, used to get same output for Python 2/3
+        # hexstrlify() = str(hexlify()).rstrip("'").replace("b'","",1).replace("'","")
+        # in simplebitcoinfuncs.miscfuncs, used to get same output for Python 2/3
 
-    message = message + '\n\n\n' + strlify(signmsg(message,sender_privkey,True,int(genkeyhex(),16)))
+    message = message + '\n\n\n' + strlify(signmsg(message,sender_privkey,True))
     # Recipient can authenticate message with pubkey of sender
     # Authentication can only occur after decryption
     # signmsg() found in simplebitcoinfuncs.signandverify
-    # genkeyhex() used for k found in simplebitcoinfuncs.miscbitcoinfuncs
-    # k via RFC 6979 coming soon
 
     # Pad
     numpads = 16 - (len(message) % 16)
